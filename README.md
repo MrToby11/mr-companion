@@ -29,6 +29,7 @@ mr-companion/
 ├── requirements.txt          # Python dependencies
 ├── app/
 │   ├── models/               # Python data classes (one file per domain)
+│   │   ├── store.py          # Temporarily replaces the database
 │   │   ├── user.py           # User, Client, Caregiver, Admin
 │   │   ├── device.py         # Device
 │   │   ├── subscription.py   # Subscription, Payment
@@ -46,8 +47,6 @@ mr-companion/
 ```
 
 A request follows this path: **browser → main.py → router → store → response**. The routers read and write to `store.py` (which will be swapped out for a real database later).
-
-API documentation is auto-generated at **http://localhost:8000/docs** — you can test every endpoint there without writing any code.
 
 
 -----
