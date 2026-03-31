@@ -28,6 +28,7 @@ mr-companion/
 ├── main.py                   # App entry point — starts the server, registers all routes
 ├── requirements.txt          # Python dependencies
 ├── app/
+│   ├── store.py              # Temporarily replaces the database
 │   ├── models/               # Python data classes (one file per domain)
 │   │   ├── store.py          # Temporarily replaces the database
 │   │   ├── user.py           # User, Client, Caregiver, Admin
