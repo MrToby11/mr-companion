@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.routers import devices, emergency, subscriptions, users
+from app.routers import auth, devices, emergency, subscriptions, users
 
 app = FastAPI(title="Mr. Companion API", version="0.1.0", docs_url=None, redoc_url=None)
 
@@ -18,6 +18,7 @@ templates = Jinja2Templates(directory="templates")
 
 # Register each router under its API prefix
 # All API endpoints are grouped under /api/ to keep them separate from page routes
+app.include_router(auth.router,          prefix="/api/auth",          tags=["auth"])
 app.include_router(users.router,         prefix="/api/users",         tags=["users"])
 app.include_router(devices.router,       prefix="/api/devices",       tags=["devices"])
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
@@ -26,6 +27,11 @@ app.include_router(emergency.router,     prefix="/api/emergency",     tags=["eme
 
 # Page routes — serve the HTML frontend
 # These are not API endpoints, just HTML pages returned to the browser
+
+@app.get("/login")
+async def login_page(request: Request):
+    return templates.TemplateResponse(request, "login.html")
+
 
 @app.get("/")
 async def user_app(request: Request):
