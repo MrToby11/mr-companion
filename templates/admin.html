@@ -1,0 +1,170 @@
+<!--
+    admin.html
+    Admin portal served at http://localhost:8000/admin
+    Tabs: Dashboard | Devices | Reports | Pricing Plans
+    Intended for ABC Tech Ltd staff only — auth/access control to be added later.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mr. Companion — Admin</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- Header uses the .admin modifier class to distinguish it visually from the user app -->
+<header class="app-header admin">
+    <div class="container">
+        <div class="brand">
+            <h1>Mr. Companion <span class="admin-badge">Admin</span></h1>
+        </div>
+        <nav class="header-nav">
+            <a href="/" class="nav-link">User App</a>
+        </nav>
+    </div>
+</header>
+
+<!-- Tab buttons — data-tab matches id="tab-{value}" sections below -->
+<nav class="tab-nav">
+    <div class="container">
+        <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+        <button class="tab-btn" data-tab="devices">Devices</button>
+        <button class="tab-btn" data-tab="reports">Reports</button>
+        <button class="tab-btn" data-tab="pricing">Pricing Plans</button>
+    </div>
+</nav>
+
+<main class="container">
+
+    <!-- ========== DASHBOARD TAB ========== -->
+    <!-- Stat cards showing system-wide counts. Values are placeholders (—) until
+         the admin stats API endpoints are built and wired up with fetch(). -->
+    <section id="tab-dashboard" class="tab-content active">
+        <h2>Admin Dashboard</h2>
+        <div class="card-grid stats-grid">
+            <div class="card stat-card">
+                <span class="stat-number" id="stat-clients">—</span>
+                <span class="stat-label">Clients</span>
+            </div>
+            <div class="card stat-card">
+                <span class="stat-number" id="stat-devices">—</span>
+                <span class="stat-label">Devices</span>
+            </div>
+            <div class="card stat-card">
+                <span class="stat-number" id="stat-subs">—</span>
+                <span class="stat-label">Subscriptions</span>
+            </div>
+            <div class="card stat-card">
+                <span class="stat-number" id="stat-events">—</span>
+                <span class="stat-label">Events (30 days)</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== DEVICES TAB ========== -->
+    <!-- Table showing all registered robots and their health status.
+         The tbody is a placeholder — populate it via fetch('/api/devices') when ready. -->
+    <section id="tab-devices" class="tab-content">
+        <h2>Device Health</h2>
+        <div class="card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Serial Number</th>
+                        <th>Status</th>
+                        <th>Battery</th>
+                        <th>Wi-Fi</th>
+                        <th>Client ID</th>
+                    </tr>
+                </thead>
+                <!-- Rows will be injected here dynamically once the fetch is wired up -->
+                <tbody id="devices-table-body">
+                    <tr>
+                        <td colspan="5" class="muted center">No devices registered.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ========== REPORTS TAB ========== -->
+    <!-- Placeholder cards for the three report types from GP-2/GP-3.
+         Each will become a table or chart once the reporting endpoints exist. -->
+    <section id="tab-reports" class="tab-content">
+        <h2>Reports</h2>
+        <div class="card-grid">
+            <!-- Subscription & payment records — from GP-3 admin reports -->
+            <div class="card">
+                <h3>Subscriptions &amp; Payments</h3>
+                <p class="muted">No data yet.</p>
+            </div>
+            <!-- Emergency alert log — shows events and caregiver response times -->
+            <div class="card">
+                <h3>Emergency Alerts</h3>
+                <p class="muted">No events recorded.</p>
+            </div>
+            <!-- Robot usage metrics — activity frequency per device -->
+            <div class="card">
+                <h3>Usage Analysis</h3>
+                <p class="muted">No usage data yet.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== PRICING PLANS TAB ========== -->
+    <!-- Admins can adjust the monthly price for each plan.
+         onsubmit="return false;" prevents page reload for now — wire up to a PATCH endpoint later. -->
+    <section id="tab-pricing" class="tab-content">
+        <h2>Pricing Plans</h2>
+
+        <!-- Standard plan pricing -->
+        <div class="card">
+            <h3>Standard Plan</h3>
+            <form class="form" onsubmit="return false;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Monthly Price ($)</label>
+                        <input type="number" value="19.99" step="0.01" min="0">
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-secondary">Save</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Premium plan pricing -->
+        <div class="card">
+            <h3>Premium Plan</h3>
+            <form class="form" onsubmit="return false;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Monthly Price ($)</label>
+                        <input type="number" value="39.99" step="0.01" min="0">
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-secondary">Save</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+</main>
+
+<script>
+    // Tab switching — same pattern as user.html
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+        });
+    });
+</script>
+
+</body>
+</html>
