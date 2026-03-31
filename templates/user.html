@@ -1,0 +1,260 @@
+<!--
+    user.html
+    Client-facing app served at http://localhost:8000/
+    Tabs: Dashboard | Robot Setup | Subscription | Emergency Contacts | Emergency Alert
+    Tab switching is handled in the <script> block at the bottom — no page reloads.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mr. Companion</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- Top header bar with app name and link to admin portal -->
+<header class="app-header">
+    <div class="container">
+        <div class="brand">
+            <h1>Mr. Companion</h1>
+        </div>
+        <nav class="header-nav">
+            <a href="/admin" class="nav-link">Admin Portal</a>
+        </nav>
+    </div>
+</header>
+
+<!-- Tab buttons — each data-tab value matches an id="tab-{value}" section below -->
+<nav class="tab-nav">
+    <div class="container">
+        <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+        <button class="tab-btn" data-tab="setup">Robot Setup</button>
+        <button class="tab-btn" data-tab="subscription">Subscription</button>
+        <button class="tab-btn" data-tab="contacts">Emergency Contacts</button>
+        <button class="tab-btn" data-tab="alert">Emergency Alert</button>
+    </div>
+</nav>
+
+<main class="container">
+
+    <!-- ========== DASHBOARD TAB ========== -->
+    <!-- Summary cards for quick status overview. Buttons navigate to other tabs. -->
+    <section id="tab-dashboard" class="tab-content active">
+        <h2>Dashboard</h2>
+        <div class="card-grid">
+            <div class="card">
+                <h3>Robot Status</h3>
+                <span class="status offline">Offline</span>
+                <p class="muted">No device paired yet.</p>
+                <br>
+                <!-- onclick calls switchTab() defined in the script block below -->
+                <button class="btn btn-secondary" onclick="switchTab('setup')">Set Up Robot</button>
+            </div>
+            <div class="card">
+                <h3>Subscription</h3>
+                <p class="muted">No active plan.</p>
+                <br>
+                <button class="btn btn-secondary" onclick="switchTab('subscription')">View Plans</button>
+            </div>
+            <div class="card">
+                <h3>Emergency Contacts</h3>
+                <p class="muted">No contacts registered.</p>
+                <br>
+                <button class="btn btn-secondary" onclick="switchTab('contacts')">Manage Contacts</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== ROBOT SETUP TAB ========== -->
+    <!-- Form to pair a new robot by serial number and configure its Wi-Fi. -->
+    <!-- Submitting this should call POST /api/devices/pair — not yet wired up. -->
+    <section id="tab-setup" class="tab-content">
+        <h2>Robot Setup</h2>
+        <div class="card">
+            <h3>Pair a New Robot</h3>
+            <form id="pair-form" class="form">
+                <div class="form-group">
+                    <label for="serial">Serial Number</label>
+                    <input type="text" id="serial" placeholder="e.g. MRC-2025-XXXX" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="wifi-ssid">Wi-Fi Network (SSID)</label>
+                        <input type="text" id="wifi-ssid" placeholder="Your Wi-Fi name">
+                    </div>
+                    <div class="form-group">
+                        <label for="wifi-pass">Wi-Fi Password</label>
+                        <input type="password" id="wifi-pass" placeholder="Wi-Fi password">
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">Pair Robot</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- ========== SUBSCRIPTION TAB ========== -->
+    <!-- Displays the two plan options side by side. -->
+    <!-- "Select Plan" buttons should call POST /api/subscriptions — not yet wired up. -->
+    <section id="tab-subscription" class="tab-content">
+        <h2>Subscription</h2>
+        <div class="card-grid">
+            <!-- Standard plan card -->
+            <div class="card plan-card">
+                <h3>Standard</h3>
+                <p class="plan-price">$19.99<span>/month</span></p>
+                <button class="btn btn-secondary">Select Plan</button>
+            </div>
+            <!-- Premium plan card — highlighted as recommended -->
+            <div class="card plan-card featured">
+                <h3>Premium</h3>
+                <p class="plan-price">$39.99<span>/month</span></p>
+                <button class="btn btn-primary">Select Plan</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== EMERGENCY CONTACTS TAB ========== -->
+    <!-- Form to add a contact. The contacts list below it will be populated dynamically. -->
+    <!-- Submit should call POST /api/emergency/contacts — not yet wired up. -->
+    <section id="tab-contacts" class="tab-content">
+        <h2>Emergency Contacts</h2>
+        <div class="card">
+            <h3>Add Contact</h3>
+            <form id="contact-form" class="form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="contact-name">Full Name</label>
+                        <input type="text" id="contact-name" placeholder="Contact name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-phone">Phone Number</label>
+                        <input type="tel" id="contact-phone" placeholder="+1 (xxx) xxx-xxxx" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="contact-relationship">Relationship</label>
+                        <select id="contact-relationship">
+                            <option>Spouse</option>
+                            <option>Child</option>
+                            <option>Sibling</option>
+                            <option>Friend</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <!-- Priority 1 is called first in an emergency -->
+                        <label for="contact-priority">Priority Order (1 = first called)</label>
+                        <input type="number" id="contact-priority" min="1" max="5" value="1">
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">Add Contact</button>
+                </div>
+            </form>
+        </div>
+        <!-- This card will be populated with the contact list once the API is wired up -->
+        <div class="card" id="contacts-list">
+            <h3>Registered Contacts</h3>
+            <p class="muted">No contacts added yet.</p>
+        </div>
+    </section>
+
+    <!-- ========== EMERGENCY ALERT TAB ========== -->
+    <!-- Three cards that swap visibility to show alert states. Only one is visible at a time:
+         1. alert-trigger-card — default, shows the trigger button
+         2. alert-status-card  — shown during the 30-second countdown window
+         3. alert-sent-card    — shown after the countdown expires (alert dispatched) -->
+    <section id="tab-alert" class="tab-content">
+        <h2>Emergency Alert</h2>
+
+        <!-- State 1: Ready to trigger -->
+        <div class="card alert-card" id="alert-trigger-card">
+            <h3>Trigger Emergency Alert</h3>
+            <p>Pressing this button will start a 30-second confirmation window. If not cancelled, your emergency contacts will be notified in priority order. If no one acknowledges, emergency services will be contacted.</p>
+            <div class="alert-actions">
+                <button class="btn btn-danger" id="trigger-alert-btn">Trigger Emergency</button>
+            </div>
+        </div>
+
+        <!-- State 2: Countdown in progress -->
+        <div class="card" id="alert-status-card" style="display: none;">
+            <h3>Alert in Progress</h3>
+            <div class="countdown">
+                <span class="countdown-number" id="countdown-timer">30</span>
+                <span class="countdown-label">seconds remaining — cancel to stop</span>
+            </div>
+            <button class="btn btn-secondary" id="cancel-alert-btn">Cancel Alert</button>
+        </div>
+
+        <!-- State 3: Alert has been sent -->
+        <div class="card" id="alert-sent-card" style="display: none;">
+            <h3>Alert Sent</h3>
+            <p>Your emergency contacts have been notified. If no acknowledgement is received, emergency services will be contacted.</p>
+            <br>
+            <button class="btn btn-secondary" onclick="resetAlert()">Dismiss</button>
+        </div>
+    </section>
+
+</main>
+
+<script>
+    // --- Tab switching ---
+    // switchTab() is called both by the tab buttons (via event listeners below)
+    // and by the onclick buttons inside the dashboard cards.
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(sec => sec.classList.remove('active'));
+        document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+    }
+
+    // Attach click handler to every tab button
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // --- Emergency alert countdown ---
+    // countdownInterval is stored so we can cancel it if the user clicks "Cancel".
+    let countdownInterval = null;
+
+    // Trigger button: hide the prompt card, show the countdown card, start the timer
+    document.getElementById('trigger-alert-btn').addEventListener('click', () => {
+        document.getElementById('alert-trigger-card').style.display = 'none';
+        document.getElementById('alert-status-card').style.display = 'block';
+
+        let seconds = 30;
+        document.getElementById('countdown-timer').textContent = seconds;
+
+        countdownInterval = setInterval(() => {
+            seconds--;
+            document.getElementById('countdown-timer').textContent = seconds;
+            // When the countdown hits zero, show the "alert sent" confirmation
+            if (seconds <= 0) {
+                clearInterval(countdownInterval);
+                document.getElementById('alert-status-card').style.display = 'none';
+                document.getElementById('alert-sent-card').style.display = 'block';
+            }
+        }, 1000); // fires every 1 second
+    });
+
+    // Cancel button: stop the timer and go back to the trigger card
+    document.getElementById('cancel-alert-btn').addEventListener('click', () => {
+        clearInterval(countdownInterval);
+        document.getElementById('alert-status-card').style.display = 'none';
+        document.getElementById('alert-trigger-card').style.display = 'block';
+    });
+
+    // Dismiss button on the "alert sent" card: reset back to the trigger state
+    function resetAlert() {
+        document.getElementById('alert-sent-card').style.display = 'none';
+        document.getElementById('alert-trigger-card').style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
