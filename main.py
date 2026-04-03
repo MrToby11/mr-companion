@@ -6,9 +6,15 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.routers import auth, devices, emergency, subscriptions, users
+from app.db import seed_event_types
+from app.routers import admin, auth, devices, emergency, subscriptions, users
 
-app = FastAPI(title="Mr. Companion API", version="0.1.0", docs_url=None, redoc_url=None)
+app = FastAPI(title="Mr. Companion API", version="0.1.0", docs_url="/docs", redoc_url=None)
+
+
+@app.on_event("startup")
+def on_startup():
+    seed_event_types()
 
 # Serve everything in /static at the /static URL path
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -18,6 +24,7 @@ templates = Jinja2Templates(directory="templates")
 
 # Register each router under its API prefix
 # All API endpoints are grouped under /api/ to keep them separate from page routes
+app.include_router(admin.router,         prefix="/api/admin",         tags=["admin"])
 app.include_router(auth.router,          prefix="/api/auth",          tags=["auth"])
 app.include_router(users.router,         prefix="/api/users",         tags=["users"])
 app.include_router(devices.router,       prefix="/api/devices",       tags=["devices"])
@@ -31,6 +38,11 @@ app.include_router(emergency.router,     prefix="/api/emergency",     tags=["eme
 @app.get("/login")
 async def login_page(request: Request):
     return templates.TemplateResponse(request, "login.html")
+
+
+@app.get("/register")
+async def register_page(request: Request):
+    return templates.TemplateResponse(request, "register.html")
 
 
 @app.get("/")

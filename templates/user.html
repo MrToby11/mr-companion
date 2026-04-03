@@ -21,6 +21,8 @@
             <h1>Mr. Companion</h1>
         </div>
         <nav class="header-nav">
+            <span id="header-username" class="nav-link"></span>
+            <a href="#" class="nav-link" onclick="logout()">Logout</a>
             <a href="/admin" class="nav-link">Admin Portal</a>
         </nav>
     </div>
@@ -203,6 +205,23 @@
 </main>
 
 <script>
+    // --- Session check ---
+    // Redirect to login if no session exists
+    const userId   = localStorage.getItem('user_id');
+    const fullName = localStorage.getItem('full_name');
+    if (!userId) {
+        window.location.href = '/login';
+    } else {
+        document.getElementById('header-username').textContent = fullName;
+    }
+
+    function logout() {
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('role');
+        localStorage.removeItem('full_name');
+        window.location.href = '/login';
+    }
+
     // --- Tab switching ---
     // switchTab() is called both by the tab buttons (via event listeners below)
     // and by the onclick buttons inside the dashboard cards.
