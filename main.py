@@ -39,6 +39,11 @@ async def login_page(request: Request):
     return templates.TemplateResponse(request, "login.html")
 
 
+@app.get("/register")
+async def register_page(request: Request):
+    return templates.TemplateResponse(request, "register.html")
+
+
 @app.get("/")
 async def user_app(request: Request):
     # Client-facing app: Dashboard, Robot Setup, Subscription, Emergency Contacts, Emergency Alert
