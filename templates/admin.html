@@ -21,6 +21,8 @@
             <h1>Mr. Companion <span class="admin-badge">Admin</span></h1>
         </div>
         <nav class="header-nav">
+            <span id="header-username" class="nav-link"></span>
+            <a href="#" class="nav-link" onclick="logout()">Logout</a>
             <a href="/" class="nav-link">User App</a>
         </nav>
     </div>
@@ -155,7 +157,21 @@
 </main>
 
 <script>
-    // Tab switching — same pattern as user.html
+    // --- Session (testing mode: no redirect, show name if logged in) ---
+    // TODO: restrict to admin role only before production
+    const fullName = localStorage.getItem('full_name');
+    if (fullName) {
+        document.getElementById('header-username').textContent = fullName;
+    }
+
+    function logout() {
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('role');
+        localStorage.removeItem('full_name');
+        window.location.href = '/login';
+    }
+
+    // --- Tab switching — same pattern as user.html ---
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -164,6 +180,23 @@
             document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
         });
     });
+
+    // --- Dashboard stats ---
+    // Fetch counts from the API and populate the stat cards on the dashboard tab
+    async function loadStats() {
+        try {
+            const res  = await fetch('/api/admin/stats');
+            const data = await res.json();
+            document.getElementById('stat-clients').textContent = data.clients;
+            document.getElementById('stat-devices').textContent = data.devices;
+            document.getElementById('stat-subs').textContent    = data.subscriptions;
+            document.getElementById('stat-events').textContent  = data.events_30d;
+        } catch (err) {
+            console.error('Failed to load stats:', err);
+        }
+    }
+
+    loadStats();
 </script>
 
 </body>
