@@ -6,9 +6,15 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from app.db import seed_event_types
 from app.routers import auth, devices, emergency, subscriptions, users
 
-app = FastAPI(title="Mr. Companion API", version="0.1.0", docs_url=None, redoc_url=None)
+app = FastAPI(title="Mr. Companion API", version="0.1.0", docs_url="/docs", redoc_url=None)
+
+
+@app.on_event("startup")
+def on_startup():
+    seed_event_types()
 
 # Serve everything in /static at the /static URL path
 app.mount("/static", StaticFiles(directory="static"), name="static")

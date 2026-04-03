@@ -12,7 +12,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app import store
+from app.db import get_db
 from app.models.device import Device, DeviceStatus
 
 router = APIRouter()
@@ -45,29 +45,37 @@ def pair_device(req: PairDeviceRequest):
     Device starts in PAIRING status until Wi-Fi setup is confirmed.
     A serial number can only be paired once.
     """
-    if req.client_id not in store.clients:
-        raise HTTPException(status_code=404, detail="Client not found")
-    if any(d.serial_number == req.serial_number for d in store.devices.values()):
-        raise HTTPException(status_code=400, detail="Device already paired")
+    with get_db() as db:
+        if not db.execute("SELECT 1 FROM Client WHERE userID = ?", (req.client_id,)).fetchone():
+            raise HTTPException(status_code=404, detail="Client not found")
+        if db.execute("SELECT 1 FROM Device WHERE serialNumber = ?", (req.serial_number,)).fetchone():
+            raise HTTPException(status_code=400, detail="Device already paired")
 
-    device = Device(serial_number=req.serial_number, client_id=req.client_id, status=DeviceStatus.PAIRING)
-    store.devices[device.device_id] = device
+        device = Device(serial_number=req.serial_number, client_id=req.client_id, status=DeviceStatus.PAIRING)
+        db.execute(
+            "INSERT INTO Device (deviceID, serialNumber, clientID, status) VALUES (?, ?, ?, ?)",
+            (device.device_id, device.serial_number, device.client_id, device.status),
+        )
     return {"device_id": device.device_id, "serial_number": device.serial_number, "status": device.status}
 
 
 @router.get("/client/{client_id}")
 def get_client_devices(client_id: str):
     """Return all devices registered to a given client."""
-    devices = [d for d in store.devices.values() if d.client_id == client_id]
+    with get_db() as db:
+        rows = db.execute(
+            "SELECT deviceID, serialNumber, status, batteryLevel, wifiStatus FROM Device WHERE clientID = ?",
+            (client_id,),
+        ).fetchall()
     return [
         {
-            "device_id":     d.device_id,
-            "serial_number": d.serial_number,
-            "status":        d.status,
-            "battery_level": d.battery_level,
-            "wifi_status":   d.wifi_status,
+            "device_id":     r["deviceID"],
+            "serial_number": r["serialNumber"],
+            "status":        r["status"],
+            "battery_level": r["batteryLevel"],
+            "wifi_status":   r["wifiStatus"],
         }
-        for d in devices
+        for r in rows
     ]
 
 
@@ -78,13 +86,13 @@ def update_device(device_id: str, req: UpdateDeviceRequest):
     Called by the robot to report live status, or by the app to change settings.
     Only fields included in the request body are changed.
     """
-    device = store.devices.get(device_id)
-    if not device:
-        raise HTTPException(status_code=404, detail="Device not found")
+    with get_db() as db:
+        if not db.execute("SELECT 1 FROM Device WHERE deviceID = ?", (device_id,)).fetchone():
+            raise HTTPException(status_code=404, detail="Device not found")
 
-    # Apply only the fields that were provided
-    if req.status        is not None: device.status        = req.status
-    if req.battery_level is not None: device.battery_level = req.battery_level
-    if req.wifi_status   is not None: device.wifi_status   = req.wifi_status
+        if req.status        is not None: db.execute("UPDATE Device SET status = ? WHERE deviceID = ?",       (req.status,        device_id))
+        if req.battery_level is not None: db.execute("UPDATE Device SET batteryLevel = ? WHERE deviceID = ?", (req.battery_level, device_id))
+        if req.wifi_status   is not None: db.execute("UPDATE Device SET wifiStatus = ? WHERE deviceID = ?",   (req.wifi_status,   device_id))
 
-    return {"device_id": device.device_id, "status": device.status}
+        row = db.execute("SELECT status FROM Device WHERE deviceID = ?", (device_id,)).fetchone()
+    return {"device_id": device_id, "status": row["status"]}

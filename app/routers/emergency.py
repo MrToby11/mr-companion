@@ -15,8 +15,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app import store
-from app.models.emergency import EmergencyContact, Event, EventContact, NotificationStatus
+from app.db import get_db
+from app.models.emergency import EmergencyContact, Event, NotificationStatus
 
 router = APIRouter()
 
@@ -35,7 +35,7 @@ class AddContactRequest(BaseModel):
 class TriggerEventRequest(BaseModel):
     """Body for POST /api/emergency/events"""
     device_id:     str
-    event_type_id: int           # Must match a key in store.event_types (1=Fall, 2=Battery, 3=Offline)
+    event_type_id: int           # Must match a row in the EventType table (1=Fall, 2=Battery, 3=Offline)
     notes:         Optional[str] = None
 
 
@@ -47,17 +47,21 @@ def add_emergency_contact(req: AddContactRequest):
     Register an emergency contact for a client.
     Up to 5 contacts are recommended (priority_order 1–5), but not enforced here.
     """
-    if req.client_id not in store.clients:
-        raise HTTPException(status_code=404, detail="Client not found")
+    with get_db() as db:
+        if not db.execute("SELECT 1 FROM Client WHERE userID = ?", (req.client_id,)).fetchone():
+            raise HTTPException(status_code=404, detail="Client not found")
 
-    contact = EmergencyContact(
-        client_id=req.client_id,
-        name=req.name,
-        phone_number=req.phone_number,
-        relationship=req.relationship,
-        priority_order=req.priority_order,
-    )
-    store.emergency_contacts[contact.contact_id] = contact
+        contact = EmergencyContact(
+            client_id=req.client_id,
+            name=req.name,
+            phone_number=req.phone_number,
+            relationship=req.relationship,
+            priority_order=req.priority_order,
+        )
+        db.execute(
+            "INSERT INTO EmergencyContact (contactID, clientID, name, phoneNumber, relationship, priorityOrder) VALUES (?, ?, ?, ?, ?, ?)",
+            (contact.contact_id, contact.client_id, contact.name, contact.phone_number, contact.relationship, contact.priority_order),
+        )
     return {"contact_id": contact.contact_id, "name": contact.name, "priority_order": contact.priority_order}
 
 
@@ -65,21 +69,23 @@ def add_emergency_contact(req: AddContactRequest):
 def get_emergency_contacts(client_id: str):
     """
     Return all emergency contacts for a client, sorted by priority_order ascending.
-    The sort here mirrors the index on (clientID, priorityOrder) in the DB schema.
+    ORDER BY in the query mirrors the index on (clientID, priorityOrder) in the schema.
     """
-    contacts = sorted(
-        [c for c in store.emergency_contacts.values() if c.client_id == client_id],
-        key=lambda c: c.priority_order,
-    )
+    with get_db() as db:
+        rows = db.execute(
+            "SELECT contactID, name, phoneNumber, relationship, priorityOrder "
+            "FROM EmergencyContact WHERE clientID = ? ORDER BY priorityOrder",
+            (client_id,),
+        ).fetchall()
     return [
         {
-            "contact_id":     c.contact_id,
-            "name":           c.name,
-            "phone_number":   c.phone_number,
-            "relationship":   c.relationship,
-            "priority_order": c.priority_order,
+            "contact_id":     r["contactID"],
+            "name":           r["name"],
+            "phone_number":   r["phoneNumber"],
+            "relationship":   r["relationship"],
+            "priority_order": r["priorityOrder"],
         }
-        for c in contacts
+        for r in rows
     ]
 
 
@@ -91,35 +97,39 @@ def trigger_event(req: TriggerEventRequest):
     In production, this would send real SMS/calls — here it just creates EventContact records.
     Escalation to emergency services would be handled by a background task after a timeout.
     """
-    if req.device_id not in store.devices:
-        raise HTTPException(status_code=404, detail="Device not found")
-    if req.event_type_id not in store.event_types:
-        raise HTTPException(status_code=400, detail="Unknown event type")
+    with get_db() as db:
+        device_row = db.execute(
+            "SELECT clientID FROM Device WHERE deviceID = ?", (req.device_id,)
+        ).fetchone()
+        if not device_row:
+            raise HTTPException(status_code=404, detail="Device not found")
 
-    # Log the event
-    event = Event(device_id=req.device_id, event_type_id=req.event_type_id, notes=req.notes)
-    store.events[event.event_id] = event
+        event_type_row = db.execute(
+            "SELECT name FROM EventType WHERE eventTypeID = ?", (req.event_type_id,)
+        ).fetchone()
+        if not event_type_row:
+            raise HTTPException(status_code=400, detail="Unknown event type")
 
-    # Look up which client owns this device, then get their contacts in priority order
-    device = store.devices[req.device_id]
-    contacts = sorted(
-        [c for c in store.emergency_contacts.values() if c.client_id == device.client_id],
-        key=lambda c: c.priority_order,
-    )
-
-    # Create an EventContact record for each contact to track notification status
-    for contact in contacts:
-        store.event_contacts.append(
-            EventContact(
-                event_id=event.event_id,
-                contact_id=contact.contact_id,
-                status=NotificationStatus.SENT,
-                notified_at=datetime.utcnow(),
-            )
+        event = Event(device_id=req.device_id, event_type_id=req.event_type_id, notes=req.notes)
+        db.execute(
+            "INSERT INTO Event (eventID, deviceID, eventTypeID, eventTimestamp, notes) VALUES (?, ?, ?, ?, ?)",
+            (event.event_id, event.device_id, event.event_type_id, event.event_timestamp, event.notes),
         )
+
+        contacts = db.execute(
+            "SELECT contactID FROM EmergencyContact WHERE clientID = ? ORDER BY priorityOrder",
+            (device_row["clientID"],),
+        ).fetchall()
+
+        now = datetime.utcnow()
+        for contact in contacts:
+            db.execute(
+                "INSERT INTO EventContact (eventID, contactID, notifiedAt, status) VALUES (?, ?, ?, ?)",
+                (event.event_id, contact["contactID"], now, NotificationStatus.SENT),
+            )
 
     return {
         "event_id":          event.event_id,
-        "event_type":        store.event_types[req.event_type_id].name,
+        "event_type":        event_type_row["name"],
         "contacts_notified": len(contacts),
     }
