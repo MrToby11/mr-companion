@@ -57,6 +57,9 @@ def register_client(req: RegisterClientRequest):
     Rejects duplicate emails since email is used as a unique identifier for login.
     Inserts into Users first, then Client (two-table inheritance from the schema).
     """
+    if not req.date_of_birth:
+        raise HTTPException(status_code=400, detail="Date of birth is required for client accounts")
+
     with get_db() as db:
         if db.execute("SELECT 1 FROM Users WHERE email = ?", (req.email,)).fetchone():
             raise HTTPException(status_code=400, detail="Email already registered")
