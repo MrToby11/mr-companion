@@ -92,47 +92,46 @@
     </section>
 
     <!-- ========== REPORTS TAB ========== -->
-    <!-- Placeholder cards for the three report types from GP-2/GP-3.
-         Each will become a table or chart once the reporting endpoints exist. -->
     <section id="tab-reports" class="tab-content">
         <h2>Reports</h2>
-        <div class="card-grid">
-            <!-- Subscription & payment records — from GP-3 admin reports -->
-            <div class="card">
-                <h3>Subscriptions &amp; Payments</h3>
-                <p class="muted">No data yet.</p>
-            </div>
-            <!-- Emergency alert log — shows events and caregiver response times -->
-            <div class="card">
-                <h3>Emergency Alerts</h3>
-                <p class="muted">No events recorded.</p>
-            </div>
-            <!-- Robot usage metrics — activity frequency per device -->
-            <div class="card">
-                <h3>Usage Analysis</h3>
-                <p class="muted">No usage data yet.</p>
-            </div>
+
+        <!-- Subscription & payment records -->
+        <div class="card" style="margin-bottom:1.5rem;">
+            <h3>Subscriptions &amp; Payments</h3>
+            <div id="report-subscriptions"><p class="muted">Loading...</p></div>
+        </div>
+
+        <!-- Emergency alert log -->
+        <div class="card" style="margin-bottom:1.5rem;">
+            <h3>Emergency Alerts</h3>
+            <div id="report-emergency"><p class="muted">Loading...</p></div>
+        </div>
+
+        <!-- Device usage metrics -->
+        <div class="card">
+            <h3>Usage Analysis</h3>
+            <div id="report-usage"><p class="muted">Loading...</p></div>
         </div>
     </section>
 
     <!-- ========== PRICING PLANS TAB ========== -->
-    <!-- Admins can adjust the monthly price for each plan.
-         onsubmit="return false;" prevents page reload for now — wire up to a PATCH endpoint later. -->
+    <!-- Admins can adjust the monthly price for each plan. -->
     <section id="tab-pricing" class="tab-content">
         <h2>Pricing Plans</h2>
 
         <!-- Standard plan pricing -->
         <div class="card">
             <h3>Standard Plan</h3>
-            <form class="form" onsubmit="return false;">
+            <form class="form" id="form-standard" onsubmit="savePricing(event, 'standard')">
                 <div class="form-row">
                     <div class="form-group">
                         <label>Monthly Price ($)</label>
-                        <input type="number" value="19.99" step="0.01" min="0">
+                        <input type="number" id="price-input-standard" step="0.01" min="0" value="19.99">
                     </div>
                 </div>
                 <div>
                     <button type="submit" class="btn btn-secondary">Save</button>
+                    <span id="pricing-msg-standard" style="margin-left:0.75rem; font-size:0.875rem;"></span>
                 </div>
             </form>
         </div>
@@ -140,15 +139,16 @@
         <!-- Premium plan pricing -->
         <div class="card">
             <h3>Premium Plan</h3>
-            <form class="form" onsubmit="return false;">
+            <form class="form" id="form-premium" onsubmit="savePricing(event, 'premium')">
                 <div class="form-row">
                     <div class="form-group">
                         <label>Monthly Price ($)</label>
-                        <input type="number" value="39.99" step="0.01" min="0">
+                        <input type="number" id="price-input-premium" step="0.01" min="0" value="39.99">
                     </div>
                 </div>
                 <div>
                     <button type="submit" class="btn btn-secondary">Save</button>
+                    <span id="pricing-msg-premium" style="margin-left:0.75rem; font-size:0.875rem;"></span>
                 </div>
             </form>
         </div>
@@ -171,18 +171,21 @@
         window.location.href = '/login';
     }
 
-    // --- Tab switching — same pattern as user.html ---
+    // --- Tab switching ---
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+
+            if (btn.dataset.tab === 'devices') loadDevices();
+            if (btn.dataset.tab === 'reports') loadReports();
+            if (btn.dataset.tab === 'pricing') loadPricing();
         });
     });
 
     // --- Dashboard stats ---
-    // Fetch counts from the API and populate the stat cards on the dashboard tab
     async function loadStats() {
         try {
             const res  = await fetch('/api/admin/stats');
@@ -196,7 +199,173 @@
         }
     }
 
+    // --- Device health table ---
+    async function loadDevices() {
+        try {
+            const res     = await fetch('/api/admin/devices');
+            const devices = await res.json();
+            const tbody   = document.getElementById('devices-table-body');
+
+            if (devices.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="muted center">No devices registered.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = devices.map(d => `
+                <tr>
+                    <td>${d.serial_number}</td>
+                    <td>${d.status ?? '—'}</td>
+                    <td>${d.battery_level != null ? d.battery_level + '%' : '—'}</td>
+                    <td>${d.wifi_status ?? '—'}</td>
+                    <td>${d.client_id}</td>
+                </tr>`
+            ).join('');
+        } catch (err) {
+            console.error('Failed to load devices:', err);
+        }
+    }
+
+    // --- Pricing Plans ---
+    async function loadPricing() {
+        try {
+            const res  = await fetch('/api/admin/pricing');
+            const data = await res.json();
+            document.getElementById('price-input-standard').value = data.standard.toFixed(2);
+            document.getElementById('price-input-premium').value  = data.premium.toFixed(2);
+        } catch (err) {
+            console.error('Failed to load pricing:', err);
+        }
+    }
+
+    async function savePricing(event, planType) {
+        event.preventDefault();
+        const msgEl = document.getElementById(`pricing-msg-${planType}`);
+        const price = parseFloat(document.getElementById(`price-input-${planType}`).value);
+
+        try {
+            const res = await fetch('/api/admin/pricing', {
+                method:  'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ plan_type: planType, price }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                msgEl.style.color   = '#27ae60';
+                msgEl.textContent   = `Saved: $${data.price.toFixed(2)}/month`;
+            } else {
+                const data = await res.json();
+                msgEl.style.color = '#c0392b';
+                msgEl.textContent = data.detail || 'Failed to save.';
+            }
+        } catch {
+            msgEl.style.color = '#c0392b';
+            msgEl.textContent = 'Could not connect to server.';
+        }
+        setTimeout(() => { msgEl.textContent = ''; }, 3000);
+    }
+
+    // --- Reports ---
+    async function loadReports() {
+        loadReportSubscriptions();
+        loadReportEmergency();
+        loadReportUsage();
+    }
+
+    async function loadReportSubscriptions() {
+        const el = document.getElementById('report-subscriptions');
+        try {
+            const res  = await fetch('/api/admin/reports/subscriptions');
+            const rows = await res.json();
+            if (rows.length === 0) {
+                el.innerHTML = '<p class="muted">No subscription data yet.</p>';
+                return;
+            }
+            const trs = rows.map(r => `
+                <tr>
+                    <td>${r.client_name}</td>
+                    <td>${r.email}</td>
+                    <td>${r.plan_type.charAt(0).toUpperCase() + r.plan_type.slice(1)}</td>
+                    <td>${new Date(r.expiry_date).toLocaleDateString()}</td>
+                    <td>${r.payment_count}</td>
+                    <td>$${r.total_paid.toFixed(2)}</td>
+                </tr>`).join('');
+            el.innerHTML = `
+                <table class="data-table">
+                    <thead><tr>
+                        <th>Client</th><th>Email</th><th>Plan</th>
+                        <th>Expires</th><th>Payments</th><th>Total Paid</th>
+                    </tr></thead>
+                    <tbody>${trs}</tbody>
+                </table>`;
+        } catch {
+            el.innerHTML = '<p class="muted">Failed to load subscription data.</p>';
+        }
+    }
+
+    async function loadReportEmergency() {
+        const el = document.getElementById('report-emergency');
+        try {
+            const res  = await fetch('/api/admin/reports/emergency');
+            const rows = await res.json();
+            if (rows.length === 0) {
+                el.innerHTML = '<p class="muted">No emergency events recorded.</p>';
+                return;
+            }
+            const trs = rows.map(r => `
+                <tr>
+                    <td>${new Date(r.timestamp).toLocaleString()}</td>
+                    <td>${r.event_type}</td>
+                    <td>${r.severity}</td>
+                    <td>${r.serial_number}</td>
+                    <td>${r.contacts_notified}</td>
+                    <td>${r.notes ?? '—'}</td>
+                </tr>`).join('');
+            el.innerHTML = `
+                <table class="data-table">
+                    <thead><tr>
+                        <th>Time</th><th>Event</th><th>Severity</th>
+                        <th>Device</th><th>Contacts Notified</th><th>Notes</th>
+                    </tr></thead>
+                    <tbody>${trs}</tbody>
+                </table>`;
+        } catch {
+            el.innerHTML = '<p class="muted">Failed to load emergency data.</p>';
+        }
+    }
+
+    async function loadReportUsage() {
+        const el = document.getElementById('report-usage');
+        try {
+            const res  = await fetch('/api/admin/reports/usage');
+            const rows = await res.json();
+            if (rows.length === 0) {
+                el.innerHTML = '<p class="muted">No usage data yet.</p>';
+                return;
+            }
+            const trs = rows.map(r => `
+                <tr>
+                    <td>${r.serial_number}</td>
+                    <td>${r.client_name}</td>
+                    <td>${r.status ?? '—'}</td>
+                    <td>${r.battery_level != null ? r.battery_level + '%' : '—'}</td>
+                    <td>${r.total_events}</td>
+                    <td>${r.last_event ? new Date(r.last_event).toLocaleString() : '—'}</td>
+                </tr>`).join('');
+            el.innerHTML = `
+                <table class="data-table">
+                    <thead><tr>
+                        <th>Serial</th><th>Client</th><th>Status</th>
+                        <th>Battery</th><th>Total Events</th><th>Last Event</th>
+                    </tr></thead>
+                    <tbody>${trs}</tbody>
+                </table>`;
+        } catch {
+            el.innerHTML = '<p class="muted">Failed to load usage data.</p>';
+        }
+    }
+
     loadStats();
+    loadDevices();
 </script>
 
 </body>

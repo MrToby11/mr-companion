@@ -96,7 +96,7 @@
             <!-- Client-only field -->
             <div class="form-group" id="field-dob">
                 <label for="dob">Date of Birth</label>
-                <input type="date" id="dob">
+                <input type="date" id="dob" required>
             </div>
 
             <!-- Caregiver-only field -->
@@ -125,8 +125,12 @@
         document.getElementById('btn-client').classList.toggle('active', role === 'client');
         document.getElementById('btn-caregiver').classList.toggle('active', role === 'caregiver');
 
-        // Show/hide role-specific fields
-        document.getElementById('field-dob').style.display          = role === 'client'    ? 'block' : 'none';
+        // Show/hide role-specific fields and update required attribute accordingly
+        const dobField = document.getElementById('field-dob');
+        const dobInput = document.getElementById('dob');
+        dobField.style.display = role === 'client' ? 'block' : 'none';
+        dobInput.required      = role === 'client';
+
         document.getElementById('field-relationship').style.display = role === 'caregiver' ? 'block' : 'none';
     }
 

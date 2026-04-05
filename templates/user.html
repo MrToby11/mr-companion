@@ -48,21 +48,21 @@
         <div class="card-grid">
             <div class="card">
                 <h3>Robot Status</h3>
-                <span class="status offline">Offline</span>
-                <p class="muted">No device paired yet.</p>
+                <span class="status" id="dash-robot-status">Loading...</span>
+                <p class="muted" id="dash-robot-detail"></p>
                 <br>
                 <!-- onclick calls switchTab() defined in the script block below -->
                 <button class="btn btn-secondary" onclick="switchTab('setup')">Set Up Robot</button>
             </div>
             <div class="card">
                 <h3>Subscription</h3>
-                <p class="muted">No active plan.</p>
+                <p class="muted" id="dash-sub-detail">Loading...</p>
                 <br>
                 <button class="btn btn-secondary" onclick="switchTab('subscription')">View Plans</button>
             </div>
             <div class="card">
                 <h3>Emergency Contacts</h3>
-                <p class="muted">No contacts registered.</p>
+                <p class="muted" id="dash-contacts-detail">Loading...</p>
                 <br>
                 <button class="btn btn-secondary" onclick="switchTab('contacts')">Manage Contacts</button>
             </div>
@@ -94,28 +94,36 @@
                 <div>
                     <button type="submit" class="btn btn-primary">Pair Robot</button>
                 </div>
+                <p id="pair-message" style="display:none; margin-top:0.75rem;"></p>
             </form>
         </div>
     </section>
 
     <!-- ========== SUBSCRIPTION TAB ========== -->
-    <!-- Displays the two plan options side by side. -->
-    <!-- "Select Plan" buttons should call POST /api/subscriptions — not yet wired up. -->
     <section id="tab-subscription" class="tab-content">
         <h2>Subscription</h2>
-        <div class="card-grid">
-            <!-- Standard plan card -->
-            <div class="card plan-card">
-                <h3>Standard</h3>
-                <p class="plan-price">$19.99<span>/month</span></p>
-                <button class="btn btn-secondary">Select Plan</button>
+
+        <!-- Shown when the client already has an active subscription -->
+        <div class="card" id="current-sub-card" style="display:none;">
+            <h3>Current Plan</h3>
+            <p id="current-sub-detail" class="muted"></p>
+        </div>
+
+        <!-- Plan selection cards — hidden once the client has subscribed -->
+        <div id="plan-selection">
+            <div class="card-grid">
+                <div class="card plan-card">
+                    <h3>Standard</h3>
+                    <p class="plan-price" id="price-standard">$19.99<span>/month</span></p>
+                    <button class="btn btn-secondary" onclick="selectPlan('standard')">Select Plan</button>
+                </div>
+                <div class="card plan-card featured">
+                    <h3>Premium</h3>
+                    <p class="plan-price" id="price-premium">$39.99<span>/month</span></p>
+                    <button class="btn btn-primary" onclick="selectPlan('premium')">Select Plan</button>
+                </div>
             </div>
-            <!-- Premium plan card — highlighted as recommended -->
-            <div class="card plan-card featured">
-                <h3>Premium</h3>
-                <p class="plan-price">$39.99<span>/month</span></p>
-                <button class="btn btn-primary">Select Plan</button>
-            </div>
+            <p id="sub-error" class="muted" style="display:none; color:#c0392b; margin-top:0.75rem;"></p>
         </div>
     </section>
 
@@ -206,7 +214,6 @@
 
 <script>
     // --- Session check ---
-    // Redirect to login if no session exists
     const userId   = localStorage.getItem('user_id');
     const fullName = localStorage.getItem('full_name');
     if (!userId) {
@@ -223,54 +230,242 @@
     }
 
     // --- Tab switching ---
-    // switchTab() is called both by the tab buttons (via event listeners below)
-    // and by the onclick buttons inside the dashboard cards.
+    // switchTab() is called both by the tab buttons and by onclick buttons in dashboard cards.
+    // Triggers a data load when switching to tabs that display live data.
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(sec => sec.classList.remove('active'));
         document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
         document.getElementById(`tab-${tabId}`).classList.add('active');
+
+        if (tabId === 'contacts')     loadContacts();
+        if (tabId === 'subscription') loadSubscription();
     }
 
-    // Attach click handler to every tab button
+    // --- Dashboard ---
+    // Fetches device status, subscription state, and contact count to populate the 3 summary cards.
+    async function loadDashboard() {
+        // Robot Status card
+        try {
+            const res     = await fetch(`/api/devices/client/${userId}`);
+            const devices = await res.json();
+            const statusEl = document.getElementById('dash-robot-status');
+            const detailEl = document.getElementById('dash-robot-detail');
+            if (res.ok && devices.length > 0) {
+                const d      = devices[0];
+                const status = d.status ?? 'unknown';
+                statusEl.textContent  = status.charAt(0).toUpperCase() + status.slice(1);
+                statusEl.className    = 'status ' + (status === 'active' ? 'active' : 'offline');
+                detailEl.textContent  = `Battery: ${d.battery_level != null ? d.battery_level + '%' : 'N/A'} · Serial: ${d.serial_number}`;
+            } else {
+                statusEl.textContent = 'No Device';
+                statusEl.className   = 'status offline';
+                detailEl.textContent = 'No device paired yet.';
+            }
+        } catch {
+            document.getElementById('dash-robot-status').textContent = 'Error';
+        }
+
+        // Emergency Contacts card
+        try {
+            const res  = await fetch(`/api/emergency/contacts/client/${userId}`);
+            const data = await res.json();
+            const count = res.ok ? data.length : 0;
+            document.getElementById('dash-contacts-detail').textContent =
+                count > 0 ? `${count} contact${count !== 1 ? 's' : ''} registered.` : 'No contacts registered.';
+        } catch {
+            document.getElementById('dash-contacts-detail').textContent = 'Could not load contacts.';
+        }
+    }
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
 
-    // --- Emergency alert countdown ---
-    // countdownInterval is stored so we can cancel it if the user clicks "Cancel".
+    // --- Robot Setup ---
+    document.getElementById('pair-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const msgEl = document.getElementById('pair-message');
+        msgEl.style.display = 'none';
+
+        const res = await fetch('/api/devices/pair', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+                serial_number: document.getElementById('serial').value,
+                client_id:     userId,
+            }),
+        });
+
+        const data = await res.json();
+        msgEl.style.display = 'block';
+        if (res.ok) {
+            msgEl.style.color   = '#27ae60';
+            msgEl.textContent   = `Robot paired successfully. Device ID: ${data.device_id}`;
+            document.getElementById('pair-form').reset();
+        } else {
+            msgEl.style.color = '#c0392b';
+            msgEl.textContent = data.detail || 'Pairing failed.';
+        }
+    });
+
+    // --- Subscription ---
+    async function loadSubscription() {
+        const res = await fetch(`/api/subscriptions/client/${userId}`);
+        if (res.ok) {
+            const data   = await res.json();
+            const expiry = new Date(data.expiry_date).toLocaleDateString();
+            const label  = data.plan_type.charAt(0).toUpperCase() + data.plan_type.slice(1);
+            document.getElementById('current-sub-detail').textContent =
+                `Plan: ${label} — Expires: ${expiry}`;
+            document.getElementById('current-sub-card').style.display = 'block';
+            document.getElementById('plan-selection').style.display   = 'none';
+            // Update dashboard card
+            document.getElementById('dash-sub-detail').textContent = `${label} plan — expires ${expiry}`;
+        } else {
+            // No subscription yet — show the plan cards
+            document.getElementById('current-sub-card').style.display = 'none';
+            document.getElementById('plan-selection').style.display   = 'block';
+            // Update dashboard card
+            document.getElementById('dash-sub-detail').textContent = 'No active plan.';
+        }
+    }
+
+    // Load plan prices from the admin pricing store so they stay in sync
+    async function loadPrices() {
+        try {
+            const res  = await fetch('/api/admin/pricing');
+            const data = await res.json();
+            document.getElementById('price-standard').innerHTML =
+                `$${data.standard.toFixed(2)}<span>/month</span>`;
+            document.getElementById('price-premium').innerHTML =
+                `$${data.premium.toFixed(2)}<span>/month</span>`;
+        } catch { /* keep hardcoded fallback values */ }
+    }
+
+    async function selectPlan(planType) {
+        const errEl = document.getElementById('sub-error');
+        errEl.style.display = 'none';
+
+        const res = await fetch('/api/subscriptions/', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ client_id: userId, plan_type: planType }),
+        });
+
+        if (res.ok) {
+            loadSubscription();
+        } else {
+            const data = await res.json();
+            errEl.textContent   = data.detail || 'Could not create subscription.';
+            errEl.style.display = 'block';
+        }
+    }
+
+    // Load all data when the page first loads
+    loadDashboard();
+    loadSubscription();
+    loadPrices();
+
+    // --- Emergency Contacts ---
+    async function loadContacts() {
+        const res  = await fetch(`/api/emergency/contacts/client/${userId}`);
+        const data = await res.json();
+        const listEl = document.getElementById('contacts-list');
+
+        if (!res.ok || data.length === 0) {
+            listEl.innerHTML = '<h3>Registered Contacts</h3><p class="muted">No contacts added yet.</p>';
+            return;
+        }
+
+        const rows = data.map(c =>
+            `<tr>
+                <td>${c.priority_order}</td>
+                <td>${c.name}</td>
+                <td>${c.phone_number}</td>
+                <td>${c.relationship}</td>
+            </tr>`
+        ).join('');
+
+        listEl.innerHTML = `
+            <h3>Registered Contacts</h3>
+            <table class="data-table">
+                <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Relationship</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+    }
+
+    document.getElementById('contact-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const res = await fetch('/api/emergency/contacts', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+                client_id:      userId,
+                name:           document.getElementById('contact-name').value,
+                phone_number:   document.getElementById('contact-phone').value,
+                relationship:   document.getElementById('contact-relationship').value,
+                priority_order: parseInt(document.getElementById('contact-priority').value),
+            }),
+        });
+
+        if (res.ok) {
+            document.getElementById('contact-form').reset();
+            loadContacts();
+        }
+    });
+
+    // --- Emergency Alert ---
     let countdownInterval = null;
 
-    // Trigger button: hide the prompt card, show the countdown card, start the timer
     document.getElementById('trigger-alert-btn').addEventListener('click', () => {
         document.getElementById('alert-trigger-card').style.display = 'none';
-        document.getElementById('alert-status-card').style.display = 'block';
+        document.getElementById('alert-status-card').style.display  = 'block';
 
         let seconds = 30;
         document.getElementById('countdown-timer').textContent = seconds;
 
-        countdownInterval = setInterval(() => {
+        countdownInterval = setInterval(async () => {
             seconds--;
             document.getElementById('countdown-timer').textContent = seconds;
-            // When the countdown hits zero, show the "alert sent" confirmation
+
             if (seconds <= 0) {
                 clearInterval(countdownInterval);
+
+                // Look up this client's first device, then fire the event
+                try {
+                    const devRes  = await fetch(`/api/devices/client/${userId}`);
+                    const devices = await devRes.json();
+                    if (devices.length > 0) {
+                        await fetch('/api/emergency/events', {
+                            method:  'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body:    JSON.stringify({
+                                device_id:     devices[0].device_id,
+                                event_type_id: 1,  // Fall Detected
+                                notes:         'Triggered manually from user app',
+                            }),
+                        });
+                    }
+                } catch (err) {
+                    console.error('Failed to log emergency event:', err);
+                }
+
                 document.getElementById('alert-status-card').style.display = 'none';
-                document.getElementById('alert-sent-card').style.display = 'block';
+                document.getElementById('alert-sent-card').style.display   = 'block';
             }
-        }, 1000); // fires every 1 second
+        }, 1000);
     });
 
-    // Cancel button: stop the timer and go back to the trigger card
     document.getElementById('cancel-alert-btn').addEventListener('click', () => {
         clearInterval(countdownInterval);
         document.getElementById('alert-status-card').style.display = 'none';
         document.getElementById('alert-trigger-card').style.display = 'block';
     });
 
-    // Dismiss button on the "alert sent" card: reset back to the trigger state
     function resetAlert() {
-        document.getElementById('alert-sent-card').style.display = 'none';
+        document.getElementById('alert-sent-card').style.display  = 'none';
         document.getElementById('alert-trigger-card').style.display = 'block';
     }
 </script>
