@@ -1,187 +1,181 @@
-<!--
-    register.html
-    Registration page served at http://localhost:8000/register
-    Supports both Client and Caregiver registration.
-    On success, redirects to /login.
--->
+<!-- File: /Users/zaido/Desktop/mr-companion/templates/register.html -->
+<!-- Mobile-style registration screen for client and caregiver onboarding. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mr. Companion — Register</title>
+    <title>Mr. Companion - Register</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <style>
-        .register-wrapper {
-            max-width: 480px;
-            margin: 4rem auto;
-            padding: 0 1rem;
-        }
-        .register-wrapper h2 {
-            margin-bottom: 1.25rem;
-        }
-        .role-toggle {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.25rem;
-        }
-        .role-toggle button {
-            flex: 1;
-            padding: 0.5rem;
-            border: 1px solid #ccc;
-            background: #f5f5f5;
-            cursor: pointer;
-            border-radius: 4px;
-            font-size: 0.95rem;
-        }
-        .role-toggle button.active {
-            background: #2c3e50;
-            color: #fff;
-            border-color: #2c3e50;
-        }
-        .register-error {
-            color: #c0392b;
-            font-size: 0.875rem;
-            display: none;
-            margin-top: 0.25rem;
-        }
-        .register-success {
-            color: #27ae60;
-            font-size: 0.875rem;
-            display: none;
-            margin-bottom: 0.75rem;
-        }
-    </style>
 </head>
 <body>
-
-<header class="app-header">
-    <div class="container">
-        <div class="brand">
-            <h1>Mr. Companion</h1>
-        </div>
-    </div>
-</header>
-
-<div class="register-wrapper">
-    <div class="card">
-        <h2>Create Account</h2>
-
-        <!-- Role selector — toggles which role-specific fields are visible -->
-        <div class="role-toggle">
-            <button id="btn-client" class="active" onclick="setRole('client')">Client</button>
-            <button id="btn-caregiver" onclick="setRole('caregiver')">Caregiver</button>
+<!-- App background and centered phone-sized frame -->
+<div class="app-bg">
+    <div class="phone-page">
+        <!-- Breadcrumb shown above the phone shell -->
+        <div class="page-crumb">
+            <span class="brand-mark" aria-hidden="true">
+                <img src="/static/img/logo.svg" alt="" class="brand-logo">
+            </span>
+            <span>Create account</span>
         </div>
 
-        <p class="register-success" id="register-success">Account created! Redirecting to login...</p>
+        <!-- Simulated mobile device shell -->
+        <div class="device-shell">
+            <div class="device-screen">
+                <!-- In-app header with brand and a quick link back to sign in -->
+                <header class="app-header">
+                    <div class="brand">
+                        <span class="brand-mark" aria-hidden="true">
+                            <img src="/static/img/logo.svg" alt="" class="brand-logo">
+                        </span>
+                        <div class="brand-copy">
+                            <h1>Mr. Companion</h1>
+                            <span class="brand-subtitle">Start your guided setup</span>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <a class="icon-btn" href="/login" aria-label="Back to login">?</a>
+                    </div>
+                </header>
 
-        <form class="form" id="register-form">
-            <div class="form-group">
-                <label for="full-name">Full Name</label>
-                <input type="text" id="full-name" required>
-            </div>
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" required>
-            </div>
-            <div class="form-group">
-                <label for="phone">Phone Number</label>
-                <input type="tel" id="phone" placeholder="+1 (xxx) xxx-xxxx" required>
-            </div>
+                <!-- Intro card reuses the shared onboarding illustration from /static/img -->
+                <section class="hero-card split screen-section">
+                    <div>
+                        <h2>Bring your robot home</h2>
+                        <p class="muted strong">Set up the account first, then we'll guide pairing, Wi-Fi, subscription, and emergency contacts in one flow.</p>
+                    </div>
+                    <div class="hero-figure">
+                        <div class="illustration-panel">
+                            <img src="/static/img/login-illustration.svg" alt="Robot onboarding illustration" class="hero-image">
+                        </div>
+                    </div>
+                </section>
 
-            <!-- Client-only field -->
-            <div class="form-group" id="field-dob">
-                <label for="dob">Date of Birth</label>
-                <input type="date" id="dob" required>
+                <!-- Registration form toggles client-only and caregiver-only fields by role -->
+                <section class="card">
+                    <div class="section-title">
+                        <h2>Create Account</h2>
+                        <span class="inline-note">Choose your role</span>
+                    </div>
+
+                    <div class="role-toggle">
+                        <button id="btn-client" class="active" onclick="setRole('client')" type="button">Client</button>
+                        <button id="btn-caregiver" onclick="setRole('caregiver')" type="button">Caregiver</button>
+                    </div>
+
+                    <p class="register-success" id="register-success">Account created! Redirecting to login...</p>
+
+                    <form class="form" id="register-form">
+                        <div class="form-group">
+                            <label for="full-name">Full Name</label>
+                            <input type="text" id="full-name" placeholder="Eleanor James" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" placeholder="eleanor@example.com" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" placeholder="Create a secure password" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" placeholder="+1 (xxx) xxx-xxxx" required>
+                        </div>
+
+                        <div class="form-group" id="field-dob">
+                            <label for="dob">Date of Birth</label>
+                            <input type="date" id="dob" required>
+                        </div>
+
+                        <div class="form-group" id="field-relationship" style="display:none;">
+                            <label for="relationship">Relationship to Client</label>
+                            <input type="text" id="relationship" placeholder="e.g. Spouse, Child">
+                        </div>
+
+                        <p class="register-error" id="register-error">Registration failed. Please try again.</p>
+
+                        <div class="actions auth-actions">
+                            <button type="submit" class="btn btn-primary">Create Account</button>
+                            <a class="btn btn-secondary" href="/login">Sign In</a>
+                        </div>
+                    </form>
+
+                    <p class="auth-links">Already have an account? <a href="/login">Sign in</a></p>
+                </section>
             </div>
-
-            <!-- Caregiver-only field -->
-            <div class="form-group" id="field-relationship" style="display:none;">
-                <label for="relationship">Relationship to Client</label>
-                <input type="text" id="relationship" placeholder="e.g. Spouse, Child">
-            </div>
-
-            <p class="register-error" id="register-error">Registration failed. Please try again.</p>
-            <button type="submit" class="btn btn-primary">Create Account</button>
-        </form>
-
-        <p class="muted" style="margin-top: 1rem;">
-            Already have an account? <a href="/login">Sign in</a>
-        </p>
+        </div>
     </div>
 </div>
 
 <script>
+    // Track which registration role is active so the correct API endpoint is used.
     let currentRole = 'client';
 
     function setRole(role) {
         currentRole = role;
 
-        // Update toggle button styles
         document.getElementById('btn-client').classList.toggle('active', role === 'client');
         document.getElementById('btn-caregiver').classList.toggle('active', role === 'caregiver');
 
-        // Show/hide role-specific fields and update required attribute accordingly
         const dobField = document.getElementById('field-dob');
         const dobInput = document.getElementById('dob');
         dobField.style.display = role === 'client' ? 'block' : 'none';
-        dobInput.required      = role === 'client';
+        dobInput.required = role === 'client';
 
         document.getElementById('field-relationship').style.display = role === 'caregiver' ? 'block' : 'none';
     }
 
+    // Submit registration data to the role-specific user creation endpoint.
     document.getElementById('register-form').addEventListener('submit', async function (e) {
         e.preventDefault();
 
-        const errorEl   = document.getElementById('register-error');
+        const errorEl = document.getElementById('register-error');
         const successEl = document.getElementById('register-success');
-        errorEl.style.display   = 'none';
+        errorEl.style.display = 'none';
         successEl.style.display = 'none';
 
-        // Build the request body based on which role is selected
         const body = {
-            full_name:    document.getElementById('full-name').value,
-            email:        document.getElementById('email').value,
-            password:     document.getElementById('password').value,
+            full_name: document.getElementById('full-name').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
             phone_number: document.getElementById('phone').value,
         };
 
+        let endpoint;
         if (currentRole === 'client') {
             body.date_of_birth = document.getElementById('dob').value || null;
-            var endpoint = '/api/users/clients';
+            endpoint = '/api/users/clients';
         } else {
             body.relationship_to_client = document.getElementById('relationship').value || null;
-            var endpoint = '/api/users/caregivers';
+            endpoint = '/api/users/caregivers';
         }
 
         try {
             const res = await fetch(endpoint, {
-                method:  'POST',
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify(body),
+                body: JSON.stringify(body),
             });
 
             if (!res.ok) {
                 const data = await res.json();
-                errorEl.textContent  = data.detail || 'Registration failed. Please try again.';
+                errorEl.textContent = data.detail || 'Registration failed. Please try again.';
                 errorEl.style.display = 'block';
                 return;
             }
 
-            // Show success message, then redirect to login after a short delay
             successEl.style.display = 'block';
             setTimeout(() => { window.location.href = '/login'; }, 1500);
-
         } catch (err) {
-            errorEl.textContent   = 'Could not connect to server.';
+            errorEl.textContent = 'Could not connect to server.';
             errorEl.style.display = 'block';
         }
     });
 </script>
-
 </body>
 </html>
