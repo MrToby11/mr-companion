@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the MiRo MDK (pre-built catkin install + Python library)
-COPY claude/mdk-230105 /mdk
+COPY mdk-230105 /mdk
 
 # Copy the bridge, mock simulator, and startup script
 COPY miro_bridge.py    /app/miro_bridge.py
