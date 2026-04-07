@@ -9,6 +9,9 @@ Jaspreet
 
 A cloud-based companion robot management system for elderly users. Built for ABC Tech Ltd.
 
+Cloud-based server:
+http://52.41.195.96:8000/
+
 
 -----
 
