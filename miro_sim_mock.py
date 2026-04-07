@@ -19,8 +19,7 @@ import time
 
 import rospy
 import std_msgs.msg
-
-import miro2 as miro
+from miro2_msg.msg import sensors_package
 
 ROBOT_NAME = os.environ.get("MIRO_ROBOT_NAME", "sim01")
 TOPIC_BASE = "/" + ROBOT_NAME
@@ -40,7 +39,7 @@ def main():
 
     pub = rospy.Publisher(
         TOPIC_BASE + "/sensors/package",
-        miro.msg.sensors_package,
+        sensors_package,
         queue_size=1,
     )
 
@@ -52,7 +51,7 @@ def main():
     rate = rospy.Rate(50)  # match the real robot's publish rate
     t = 0.0
     while not rospy.is_shutdown():
-        msg = miro.msg.sensors_package()
+        msg = sensors_package()
         # Battery oscillates gently between ~7.5 V and ~8.1 V
         msg.battery.voltage = 7.8 + 0.3 * math.sin(t * 0.05)
         pub.publish(msg)

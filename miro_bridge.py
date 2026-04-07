@@ -27,6 +27,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 
 import rospy
 import std_msgs.msg
+from miro2_msg.msg import sensors_package
 
 # Battery voltage range for MiRo-E (volts)
 _BATTERY_MIN_V = 6.5
@@ -108,11 +109,9 @@ def main():
 
     rospy.init_node("miro_bridge", anonymous=False)
 
-    import miro2 as miro
-
     rospy.Subscriber(
         TOPIC_BASE + "/sensors/package",
-        miro.msg.sensors_package,
+        sensors_package,
         _cb_sensors,
         queue_size=1,
         tcp_nodelay=True,

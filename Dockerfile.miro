@@ -29,5 +29,6 @@ RUN find /mdk -name "*.py" -exec chmod +x {} \; && \
 WORKDIR /app
 
 ENV MIRO_ROBOT_NAME=sim01
+ENV MIRO_ROS_RELEASE=noetic
 
 CMD ["/app/miro_start.sh"]
