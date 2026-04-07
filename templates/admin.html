@@ -266,9 +266,9 @@
     async function loadReports() {
         try {
             const [subRes, emergencyRes, usageRes] = await Promise.all([
-                fetch('/api/admin/report/subscriptions'),
-                fetch('/api/admin/report/emergency'),
-                fetch('/api/admin/report/usage'),
+                fetch('/api/admin/reports/subscriptions'),
+                fetch('/api/admin/reports/emergency'),
+                fetch('/api/admin/reports/usage'),
             ]);
 
             const subscriptions = await subRes.json();
@@ -278,14 +278,14 @@
             document.getElementById('report-subscriptions').innerHTML =
                 subscriptions.length
                     ? `<div class="table-scroll"><table class="data-table">
-                        <thead><tr><th>Client</th><th>Plan</th><th>Start</th><th>Expiry</th><th>Status</th></tr></thead>
+                        <thead><tr><th>Client</th><th>Plan</th><th>Expiry</th><th>Payments</th><th>Total Paid</th></tr></thead>
                         <tbody>${subscriptions.map(s => `
                             <tr>
-                                <td>${s.client_id}</td>
+                                <td>${s.client_name}</td>
                                 <td>${s.plan_type}</td>
-                                <td>${new Date(s.start_date).toLocaleDateString()}</td>
                                 <td>${new Date(s.expiry_date).toLocaleDateString()}</td>
-                                <td>${s.status}</td>
+                                <td>${s.payment_count}</td>
+                                <td>$${s.total_paid.toFixed(2)}</td>
                             </tr>`).join('')}
                         </tbody>
                     </table></div>`
@@ -294,13 +294,14 @@
             document.getElementById('report-emergency').innerHTML =
                 emergencies.length
                     ? `<div class="table-scroll"><table class="data-table">
-                        <thead><tr><th>Time</th><th>Device</th><th>Type</th><th>Status</th><th>Notes</th></tr></thead>
+                        <thead><tr><th>Time</th><th>Device</th><th>Type</th><th>Severity</th><th>Contacts</th><th>Notes</th></tr></thead>
                         <tbody>${emergencies.map(e => `
                             <tr>
-                                <td>${new Date(e.created_at).toLocaleString()}</td>
-                                <td>${e.device_id}</td>
+                                <td>${new Date(e.timestamp).toLocaleString()}</td>
+                                <td>${e.serial_number}</td>
                                 <td>${e.event_type}</td>
-                                <td>${e.status}</td>
+                                <td>${e.severity}</td>
+                                <td>${e.contacts_notified}</td>
                                 <td>${e.notes ?? ''}</td>
                             </tr>`).join('')}
                         </tbody>
@@ -310,13 +311,14 @@
             document.getElementById('report-usage').innerHTML =
                 usage.length
                     ? `<div class="table-scroll"><table class="data-table">
-                        <thead><tr><th>Device</th><th>Total Events</th><th>Fall Alerts</th><th>Check-ins</th></tr></thead>
+                        <thead><tr><th>Device</th><th>Client</th><th>Status</th><th>Total Events</th><th>Last Event</th></tr></thead>
                         <tbody>${usage.map(u => `
                             <tr>
-                                <td>${u.device_id}</td>
+                                <td>${u.serial_number}</td>
+                                <td>${u.client_name}</td>
+                                <td>${u.status}</td>
                                 <td>${u.total_events}</td>
-                                <td>${u.fall_events}</td>
-                                <td>${u.check_in_events}</td>
+                                <td>${u.last_event ? new Date(u.last_event).toLocaleString() : 'None'}</td>
                             </tr>`).join('')}
                         </tbody>
                     </table></div>`
