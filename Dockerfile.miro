@@ -16,15 +16,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy the MiRo MDK (pre-built catkin install + Python library)
 COPY claude/mdk-230105 /mdk
 
-# Copy the bridge script
-COPY miro_bridge.py /app/miro_bridge.py
+# Copy the bridge, mock simulator, and startup script
+COPY miro_bridge.py    /app/miro_bridge.py
+COPY miro_sim_mock.py  /app/miro_sim_mock.py
+COPY miro_start.sh     /app/miro_start.sh
+
+RUN chmod +x /app/miro_start.sh
 
 WORKDIR /app
 
 ENV MIRO_ROBOT_NAME=sim01
 
-CMD ["/bin/bash", "-c", "\
-    source /opt/ros/noetic/setup.bash && \
-    source /mdk/catkin_ws/install/setup.bash && \
-    export PYTHONPATH=/mdk/share/python:$PYTHONPATH && \
-    python3 /app/miro_bridge.py"]
+CMD ["/app/miro_start.sh"]
