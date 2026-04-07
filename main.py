@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.db import seed_event_types
-from app.routers import admin, auth, devices, emergency, subscriptions, users
+from app.routers import admin, auth, devices, emergency, miro, subscriptions, users
 
 app = FastAPI(title="Mr. Companion API", version="0.1.0", docs_url="/docs", redoc_url=None)
 
@@ -30,6 +30,7 @@ app.include_router(users.router,         prefix="/api/users",         tags=["use
 app.include_router(devices.router,       prefix="/api/devices",       tags=["devices"])
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
 app.include_router(emergency.router,     prefix="/api/emergency",     tags=["emergency"])
+app.include_router(miro.router,          prefix="/api/miro",          tags=["miro"])
 
 
 # Page routes — serve the HTML frontend

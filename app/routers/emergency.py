@@ -9,6 +9,9 @@
 #   GET   /api/emergency/contacts/client/{id}      — list a client's contacts (sorted by priority)
 #   POST  /api/emergency/events                    — trigger an event and notify contacts
 
+import json
+import urllib.error
+import urllib.request
 from datetime import datetime
 from typing import Optional
 
@@ -127,6 +130,18 @@ def trigger_event(req: TriggerEventRequest):
                 "INSERT INTO EventContact (eventID, contactID, notifiedAt, status) VALUES (?, ?, ?, ?)",
                 (event.event_id, contact["contactID"], now, NotificationStatus.SENT),
             )
+
+    # Best-effort: signal the robot to alert (LEDs + tone). Does not fail the
+    # request if the MiRo bridge is offline — emergency logging still succeeds.
+    try:
+        urllib.request.urlopen(
+            urllib.request.Request(
+                f"http://localhost:5001/alert", method="POST"
+            ),
+            timeout=3,
+        )
+    except Exception:
+        pass
 
     return {
         "event_id":          event.event_id,

@@ -1,0 +1,37 @@
+# Dockerfile.miro
+# Builds the MiRo ROS bridge container.
+#
+# Build:  docker build -f Dockerfile.miro -t miro-bridge .
+# Run:    docker run --rm --network host miro-bridge
+#
+# --network host lets the bridge reach localhost:5001 from the FastAPI app
+# and lets ROS talk to the Gazebo simulator on the same machine.
+
+FROM ros:noetic-ros-base
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-numpy \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the MiRo MDK (pre-built catkin install + Python library)
+COPY mdk-230105 /mdk
+
+# Copy the bridge, mock simulator, and startup script
+COPY miro_bridge.py    /app/miro_bridge.py
+COPY miro_sim_mock.py  /app/miro_sim_mock.py
+COPY miro_start.sh     /app/miro_start.sh
+
+# Restore execute permissions lost during Windows/scp transfer
+RUN find /mdk -name "*.py" -exec chmod +x {} \; && \
+    find /mdk -name "*.sh"  -exec chmod +x {} \; && \
+    chmod +x /app/miro_start.sh && \
+    ls /mdk/catkin_ws/install/lib/python3/dist-packages/miro2_msg || \
+    (echo "ERROR: miro2_msg not found" && exit 1)
+
+WORKDIR /app
+
+ENV MIRO_ROBOT_NAME=sim01
+ENV MIRO_ROS_RELEASE=noetic
+ENV PYTHONPATH=/mdk/share/python:/mdk/catkin_ws/install/lib/python3/dist-packages
+
+CMD ["/app/miro_start.sh"]

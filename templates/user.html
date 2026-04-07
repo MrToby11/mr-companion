@@ -127,6 +127,19 @@
                         </section>
                     </section>
 
+                        <section class="card" id="robot-status-card" style="display:none;">
+                            <div class="section-title">
+                                <h3>Robot Battery</h3>
+                                <span class="inline-note" id="battery-display">--</span>
+                            </div>
+                            <p class="muted" id="battery-detail">Sync to read the latest battery level from the robot.</p>
+                            <div class="actions" style="margin-top:12px;">
+                                <button class="btn btn-secondary" onclick="syncBattery()">Sync Battery</button>
+                            </div>
+                            <p id="battery-msg" class="muted" style="display:none; margin-top:8px;"></p>
+                        </section>
+                    </section>
+
                     <!-- Subscription tab: either show the active plan or the plan picker -->
                     <section id="tab-subscription" class="tab-content">
                         <section class="card hero-card">
@@ -277,6 +290,31 @@
         if (tabId === 'subscription') loadSubscription();
     }
 
+    // Track the paired device ID so the battery sync can use it.
+    let pairedDeviceId = null;
+
+    // Read battery from MiRo simulator and refresh the display.
+    async function syncBattery() {
+        if (!pairedDeviceId) return;
+        const msgEl = document.getElementById('battery-msg');
+        msgEl.style.display = 'none';
+
+        const res = await fetch(`/api/miro/battery/${pairedDeviceId}`);
+        const data = await res.json();
+        msgEl.style.display = 'block';
+
+        if (res.ok) {
+            document.getElementById('battery-display').textContent = `${data.battery_level}%`;
+            document.getElementById('battery-detail').textContent =
+                `Voltage: ${data.voltage}V · Level: ${data.battery_level}%`;
+            msgEl.style.color = '#257950';
+            msgEl.textContent = 'Battery synced from robot.';
+        } else {
+            msgEl.style.color = '#c54435';
+            msgEl.textContent = data.detail || 'Could not read battery.';
+        }
+    }
+
     // Load dashboard summary data for device state and contact count.
     async function loadDashboard() {
         try {
@@ -286,6 +324,11 @@
             const detailEl = document.getElementById('dash-robot-detail');
             if (res.ok && devices.length > 0) {
                 const d = devices[0];
+                pairedDeviceId = d.device_id;
+                document.getElementById('robot-status-card').style.display = 'block';
+                if (d.battery_level != null) {
+                    document.getElementById('battery-display').textContent = `${d.battery_level}%`;
+                }
                 const status = d.status ?? 'unknown';
                 statusEl.textContent = status.charAt(0).toUpperCase() + status.slice(1);
                 statusEl.className = 'status ' + (status === 'active' ? 'active' : 'offline');
