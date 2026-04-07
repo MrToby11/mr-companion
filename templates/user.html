@@ -176,32 +176,28 @@
                         </section>
                         <section class="card">
                             <h3>Add Contact</h3>
-                            <form id="contact-form" class="form">
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="contact-name">Full Name</label>
-                                        <input type="text" id="contact-name" placeholder="Contact name" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="contact-phone">Phone Number</label>
-                                        <input type="tel" id="contact-phone" placeholder="+1 (xxx) xxx-xxxx" required>
-                                    </div>
+                            <form id="contact-form" class="form block-form">
+                                <div class="form-group">
+                                    <label for="contact-name">Full Name</label>
+                                    <input type="text" id="contact-name" placeholder="Contact name" required>
                                 </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="contact-relationship">Relationship</label>
-                                        <select id="contact-relationship">
-                                            <option>Spouse</option>
-                                            <option>Child</option>
-                                            <option>Sibling</option>
-                                            <option>Friend</option>
-                                            <option>Other</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="contact-priority">Priority Order (1 = first called)</label>
-                                        <input type="number" id="contact-priority" min="1" max="5" value="1">
-                                    </div>
+                                <div class="form-group">
+                                    <label for="contact-phone">Phone Number</label>
+                                    <input type="tel" id="contact-phone" placeholder="+1 (xxx) xxx-xxxx" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="contact-relationship">Relationship</label>
+                                    <select id="contact-relationship">
+                                        <option>Spouse</option>
+                                        <option>Child</option>
+                                        <option>Sibling</option>
+                                        <option>Friend</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="contact-priority">Priority Order (1 = first called)</label>
+                                    <input type="number" id="contact-priority" min="1" max="5" value="1">
                                 </div>
                                 <div class="actions">
                                     <button type="submit" class="btn btn-primary">Add Contact</button>
