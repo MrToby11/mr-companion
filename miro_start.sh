@@ -2,8 +2,10 @@
 # miro_start.sh — starts roscore, mock simulator, and bridge inside the container.
 
 source /opt/ros/noetic/setup.bash
-source /mdk/catkin_ws/install/setup.bash
-export PYTHONPATH=/mdk/share/python:$PYTHONPATH
+source /mdk/catkin_ws/install/setup.bash || true
+
+# Set PYTHONPATH explicitly in case catkin setup had permission issues
+export PYTHONPATH=/mdk/share/python:/mdk/catkin_ws/install/lib/python3/dist-packages:$PYTHONPATH
 
 echo "Starting roscore..."
 roscore &
